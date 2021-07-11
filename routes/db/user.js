@@ -1,33 +1,150 @@
-const express = require("express");
-const { MongoClient } = require('mongodb');
+const express = require('express');
+const { check, validationResult } = require('express-validator/check');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
-const url = 'mongodb+srv://admin:MongoRox2k23@mdev.kzf7h.mongodb.net/testdb?retryWrites=true&w=majority'
-const client = new MongoClient(url, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
+const User = require("./model/User");
 
-//Authenticate
+// Sign up User
+router.post("/signup",
+    [
+        check("fname", "Please enter a valid First Name.")
+            .not()
+            .isEmpty(),
+        check("lname", "Please enter a valid Last Name.")
+            .not()
+            .isEmpty(),
+        check("email", "Please enter a valid Email.")
+            .isEmail(),
+        check("password", "Please enter a valid password.")
+            .isLength({min: 6})
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            return res.status(400).json({
+                errors: errors.array()
+            });
+        }
 
-app.get("login", (req, res) => {
-    try{
-        //Setup Connection
-        await client.connect();
-        const database = client.db();
-        const users = await db.collection('users');
+        const {
+            fname,
+            lname,
+            email,
+            password
+        } = req.body;
+        try {
+            let user = await User.findOne({
+                email
+            });
+            if(user) {
+                return res.status(400).json({
+                    msg: "User already exists."
+                });
+            }
 
-        //Query the DB
-        const query = { email: 'raaj.patel229@gmail.com'}
-        const user = await users.findOne(query);
+            user = new User({
+                fname,
+                lname,
+                email,
+                password
+            });
 
-        res.send(user)
-    }catch(err){
-        console.log("Error: " + err);
-        res.status(500);
-        res.send(err);
-    }finally {
-        await client.close();
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+
+            await user.save();
+
+            const payload = {
+                user: {
+                    id: user.id
+                }
+            };
+
+            jwt.sign(payload, "WyattCantCodeForShit", {
+                expiresIn: 10000
+            },
+                (err, token) => {
+                    if (err) throw err;
+                    res.status(200).json({
+                        token
+                    });
+                }
+            );
+        } catch (err) {
+            console.log(err.message);
+            res.status(500).send("Error in saving to DB.");
+        }
+    }
+);
+
+//Login user
+router.post("/login", [
+        check("email", "Please enter a valid email.")
+            .isEmail(),
+        check("password", "Please enter a valid password.")
+            .isLength({
+                min: 6
+            })
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+
+        if(!errors.isEmpty()) {
+            return res.status(400).json({
+                errors: errors.array()
+            });
+        }
+
+        const { email, password } = req.body;
+        try {
+            let user = await User.findOne({ email });
+            if (!user)
+                return res.status(400).json({
+                    message: "User does not exist."
+                });
+
+            const isMatch = await bcrypt.compare(password, user.password);
+            if(!isMatch)
+                return res.status(400).json({
+                    message: "Incorrect password."
+                });
+
+            const payload = {
+                user: {
+                    id: user.id
+                }
+            };
+
+            jwt.sign(payload, "WyattCantCodeForShit", {
+                expiresIn: 3600
+            },
+                (err, token) => {
+                    if (err) throw err;
+                    res.status(200).json({
+                        token
+                    });
+                }
+            );
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({
+                message: "Server Error"
+            });
+        }
+    }
+);
+
+
+//Retrieve data, already authed
+router.get("/data", auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        res.json(user);
+    } catch (err) {
+        res.send({ message: "Error fetching user info: " + err})
     }
 })
 
