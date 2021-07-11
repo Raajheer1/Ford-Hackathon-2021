@@ -144,8 +144,8 @@ router.get("/data", auth, async (req, res) => {
         const user = await User.findById(req.user.id);
         res.json(user);
     } catch (err) {
-        res.send({ message: "Error fetching user info: " + err})
+        res.send({ message: "Error fetching user info: " + err});
     }
-})
+});
 
 module.exports = router;
