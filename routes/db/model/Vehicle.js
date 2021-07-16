@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const VehicleSchema = mongoose.Schema({
+    vehicleId: {
+        type: String,
+        require: true
+    },
     make: {
         type: String,
         require: true
@@ -13,17 +17,25 @@ const VehicleSchema = mongoose.Schema({
         type: Number,
         require: true
     },
-    nickname: {
+    color: {
         type: String,
         require: true
     },
-    color: {
+    lat: {
+        type: Number,
+        require: false
+    },
+    lon: {
+        type: Number,
+        require: false
+    },
+    nickname: {
         type: String,
         require: true
     },
     range: {
         type: Number,
-        require: true
+        require: false
     },
     owner: {
         type: String,

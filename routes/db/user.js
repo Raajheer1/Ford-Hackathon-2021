@@ -148,4 +148,40 @@ router.get("/data", auth, async (req, res) => {
     }
 });
 
+//Add Access/Refresh Token
+router.post("/tokens", [
+        check("email", "Please enter a valid email")
+            .isEmail(),
+        check("access_token", "Please enter an access_token.")
+            .not()
+            .isEmpty(),
+        check("refresh_token", "Please enter a refresh_token")
+            .not()
+            .isEmpty()
+    ],
+    async (req, res) => {
+        const errors = validationResult(req);
+
+        if(!errors.isEmpty()) {
+            return res.status(400).json({
+                errors: errors.array()
+            });
+        }
+
+        const { email, access_token, refresh_token } = req.body;
+        try {
+            let user = await User.findOne({ email });
+            if (!user)
+                return res.status(400).json({
+                    message: "User does not exist."
+                });
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({
+                message: "Server Error"
+            });
+        }
+    }
+)
+
 module.exports = router;

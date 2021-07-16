@@ -4,9 +4,12 @@ const router = express.Router();
 
 const Vehicle = require('./model/Vehicle');
 
-// Create Vehcile
+// Create Vehicle
 router.post("/create",
     [
+        check("vehicleID", "Please enter a valid car make.")
+            .not()
+            .isEmpty(),
         check("make", "Please enter a valid car make.")
             .not()
             .isEmpty(),
@@ -22,9 +25,6 @@ router.post("/create",
         check("color", "Please enter a valid color.")
             .not()
             .isEmpty(),
-        check("range", "Please enter a valid range")
-            .not()
-            .isEmpty(),
         check("owner", "Please enter a valid owner email")
             .isEmail()
     ],
@@ -37,31 +37,31 @@ router.post("/create",
         }
 
         const {
+            vehicleId,
             make,
             model,
             year,
             nickname,
             color,
-            range,
             owner
         } = req.body;
         try {
             let vehicle = await Vehicle.findOne({
-                nickname
+                vehicleId
             });
             if(vehicle) {
                 return res.status(400).json({
-                    msg: "Nickname already in use."
+                    msg: "Vehicle already in database."
                 });
             }
 
             vehicle = new Vehicle({
+                vehicleId,
                 make,
                 model,
                 year,
                 nickname,
                 color,
-                range,
                 owner
             });
 
@@ -76,3 +76,8 @@ router.post("/create",
         }
     }
 );
+
+router.get("/all", (req, res) => {
+    //get every document in Vehicle table and send back
+
+})
